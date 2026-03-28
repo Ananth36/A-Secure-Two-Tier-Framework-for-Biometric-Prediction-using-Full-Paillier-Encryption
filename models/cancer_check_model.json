@@ -1,0 +1,9 @@
+{
+    "intercept": -0.7728633682233288,
+    "coefficients": {
+        "radius_mean": -4.900394004745883,
+        "texture_mean": 0.17675566839188725,
+        "perimeter_mean": 0.5492111746376406,
+        "area_mean": 0.024788067933430427
+    }
+}

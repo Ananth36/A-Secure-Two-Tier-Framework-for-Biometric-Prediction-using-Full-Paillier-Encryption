@@ -1,0 +1,12 @@
+Secure Hospital Portal: Privacy-Preserving Authentication & AnalyticsThis project implements a Distributed, Privacy-Preserving Authentication and Diagnostic Framework. It leverages DeepFace for biometric 2FA and the Paillier Homomorphic Cryptosystem to perform machine learning inference on encrypted medical data without exposing sensitive information to the global server.
+
+🛡️ Key FeaturesBiometric 2FA: Secure login using DeepFace for facial verification.Homomorphic Encryption: Uses the Paillier cryptosystem (phe library) to ensure the
+main server processes data it cannot read.Multi-Tier Architecture: \* App Server (Frontend/Local): Handles user auth, encryption, and local decryption of results.Main Server (Backend/Global): Performs "blind" model predictions on encrypted ciphertexts.Secure ML Models: Includes pre-trained models for Heart Disease, Mental Health, Cancer, and Genomic Susceptibility.
+
+🏗️ System ArchitectureUser Server: Captures data, encrypts it using the Paillier Public Key, and signs the request using RSA.Global Server: Receives encrypted data, verifies the RSA signature, performs homomorphic addition/multiplication for model inference, and returns the encrypted result.Local Decryption: Only the User Server (holding the Private Key) can decrypt the final prediction.
+
+🚀 Getting StartedPrerequisitesPython 3.12+ Webcam (for biometric 2FA) InstallationClone the repository to your local machine.Run the automated launcher:Double-click run.bat. This script will:Create a virtual environment (.venv).Install all dependencies from requirements.txt.Generate RSA and Paillier cryptographic keys.Encrypt the local datasets and train the initial models.Launch both the App Server (Port 5000) and Main Server (Port 5001).Accessing the PortalOnce the launcher completes, open your browser to:http://127.0.0.1:5000
+
+🛠️ Technology StackCore: Python, Flask, Jinja2Security: Cryptography (RSA), PHE (Paillier Homomorphic Encryption) AI/ML: TensorFlow, Scikit-Learn, DeepFace (Face Recognition) Data: Pandas, NumPy, OpenCV
+
+📄 Project Structureapp.py: The user-facing portal and authentication engine.main_server.py: The secure resource server handling encrypted computation.encryption_utils.py: Core logic for RSA/Paillier key management.train_models.py: Logic for training Logistic Regression models on encrypted data.run.bat: One-click setup and execution script.Developed as a secure framework for privacy-conscious medical diagnostics.

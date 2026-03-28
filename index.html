@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-900">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Hospital Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles */
+        body, html {
+            font-family: 'Inter', sans-serif;
+        }
+        .app-container {
+            min-height: 100vh;
+        }
+        /* Spinner for loading states */
+        .spinner {
+            border-top-color: #3498db;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        /* Modal styles */
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 40;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 50;
+        }
+    </style>
+</head>
+<body class="h-full text-gray-200">
+    <div class="app-container flex flex-col items-center justify-center p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-white">Secure Hospital Portal</h1>
+            <p id="auth-status" class="text-lg text-blue-300 mt-2">Please log in or register.</p>
+        </header>
+
+        <main id="main-content" class="w-full max-w-4xl bg-gray-800 rounded-lg shadow-2xl p-6 md:p-10 transition-all duration-300">
+
+            <div id="view-loading" class="text-center p-12">
+                <div class="spinner w-16 h-16 border-4 border-gray-600 rounded-full mx-auto"></div>
+                <p class="text-xl mt-4">Loading...</p>
+            </div>
+
+            <div id="view-login" class="hidden">
+                <h2 class="text-3xl font-semibold text-center mb-6">Login</h2>
+                <form id="login-form" class="space-y-4">
+                    <div>
+                        <label for="login-username" class="block text-sm font-medium text-gray-300">Username</label>
+                        <input type="text" id="login-username" name="username" required class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="login-password" class="block text-sm font-medium text-gray-300">Password</label>
+                        <input type="password" id="login-password" name="password" required class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800">
+                            Login
+                        </button>
+                    </div>
+                    <p class="text-center text-sm">
+                        No account?
+                        <a href="#" id="show-register-link" class="font-medium text-blue-400 hover:text-blue-300">Register here</a>
+                    </p>
+                </form>
+            </div>
+
+            <div id="view-register" class="hidden">
+                <h2 class="text-3xl font-semibold text-center mb-6">Register New Account</h2>
+                <form id="register-form" class="space-y-4">
+                    <div>
+                        <label for="reg-username" class="block text-sm font-medium text-gray-300">Username</label>
+                        <input type="text" id="reg-username" name="username" required class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="reg-password" class="block text-sm font-medium text-gray-300">Password</label>
+                        <input type="password" id="reg-password" name="password" required class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label for="reg-role" class="block text-sm font-medium text-gray-300">Select Role</label>
+                        <select id="reg-role" name="role" required class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="patient">Patient</option>
+                            <option value="doctor">Doctor</option>
+                            <option value="lab_assistant">Lab Assistant</option>
+                        </select>
+                    </div>
+                    <div class="text-center p-4 bg-gray-700 rounded-md">
+                        <h3 class="text-lg font-medium">Biometric Registration</h3>
+                        <p class="text-sm text-gray-400 mb-2">Center your face in the camera and capture.</p>
+                        <video id="video-reg" width="320" height="240" autoplay class="mx-auto rounded-md bg-black"></video>
+                        <button type="button" id="capture-reg-btn" class="mt-3 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md">
+                            Capture Photo
+                        </button>
+                        <canvas id="canvas-reg" width="320" height="240" class="hidden"></canvas>
+                        <img id="photo-reg" src="" alt="Captured Photo" class="hidden mx-auto mt-2 rounded-md h-24 w-auto">
+                        <p id="photo-reg-status" class="text-sm text-green-400 mt-1 hidden">Photo captured!</p>
+                    </div>
+                    <div class="flex items-center justify-between pt-2">
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800">
+                            Create Account
+                        </button>
+                    </div>
+                    <p class="text-center text-sm">
+                        Already have an account?
+                        <a href="#" id="show-login-link" class="font-medium text-blue-400 hover:text-blue-300">Login here</a>
+                    </p>
+                </form>
+            </div>
+
+            <div id="view-2fa" class="hidden">
+                <h2 class="text-3xl font-semibold text-center mb-6">2-Factor Authentication</h2>
+                <p class="text-center text-gray-300 mb-4">To complete your login, please verify your identity using your webcam.</p>
+                <div class="text-center p-4 bg-gray-700 rounded-md">
+                    <video id="video-2fa" width="320" height="240" autoplay class="mx-auto rounded-md bg-black"></video>
+                    <button type="button" id="capture-2fa-btn" class="mt-3 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md">
+                        Verify Identity
+                    </button>
+                    <canvas id="canvas-2fa" width="320" height="240" class="hidden"></canvas>
+                </div>
+            </div>
+
+            <div id="view-dashboard" class="hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-3xl font-semibold">Dashboard</h2>
+                    <button id="logout-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md">
+                        Logout
+                    </button>
+                </div>
+                <div id="dashboard-content"></div>
+            </div>
+
+        </main>
+
+        <div id="modal-backdrop" class="modal-backdrop"></div>
+        <div id="message-modal" class="modal w-full max-w-md bg-gray-800 rounded-lg shadow-2xl p-6">
+            <h3 id="modal-title" class="text-2xl font-semibold mb-4 text-white">Notice</h3>
+            <p id="modal-message" class="text-gray-300 mb-6"></p>
+            <div class="text-right">
+                <button id="modal-close-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md">
+                    OK
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- Global State & Config ---
+        const state = {
+            username: null,
+            role: null,
+            webcamStream: null,
+            schema: {
+                requirements: {},
+                prompts: {}
+            },
+            capturedPhoto: null // Stores base64 photo for registration
+        };
+
+        // --- DOM Elements ---
+        const $ = (selector) => document.getElementById(selector);
+
+        const views = {
+            loading: $('view-loading'),
+            login: $('view-login'),
+            register: $('view-register'),
+            twoFactor: $('view-2fa'),
+            dashboard: $('view-dashboard')
+        };
+        const mainContent = $('main-content');
+        const authStatus = $('auth-status');
+        const dashboardContent = $('dashboard-content');
+
+        // Modals
+        const modalBackdrop = $('modal-backdrop');
+        const messageModal = $('message-modal');
+        const modalTitle = $('modal-title');
+        const modalMessage = $('modal-message');
+        const modalCloseBtn = $('modal-close-btn');
+
+        // Webcam elements
+        const videoReg = $('video-reg');
+        const canvasReg = $('canvas-reg');
+        const captureRegBtn = $('capture-reg-btn');
+        const photoReg = $('photo-reg');
+        const photoRegStatus = $('photo-reg-status');
+
+        const video2FA = $('video-2fa');
+        const canvas2FA = $('canvas-2fa');
+        const capture2FABtn = $('capture-2fa-btn');
+
+        // --- Utility Functions ---
+
+        /**
+         * Shows a specific view and hides all others.
+         * @param {string} viewName - The key of the view in the `views` object.
+         */
+        function showView(viewName) {
+            Object.values(views).forEach(view => view.classList.add('hidden'));
+            if (views[viewName]) {
+                views[viewName].classList.remove('hidden');
+            }
+        }
+
+        /**
+         * Displays a modal message.
+         * @param {string} title - The title for the modal.
+         * @param {string} message - The message body.
+         * @param {string} [type='info'] - 'info' or 'error'.
+         */
+        function showMessage(title, message, type = 'info') {
+            modalTitle.textContent = title;
+            modalMessage.innerHTML = message; // Use innerHTML to allow basic formatting
+            modalTitle.className = `text-2xl font-semibold mb-4 ${type === 'error' ? 'text-red-400' : 'text-white'}`;
+
+            modalBackdrop.style.display = 'block';
+            messageModal.style.display = 'block';
+        }
+
+        function closeModal() {
+            modalBackdrop.style.display = 'none';
+            messageModal.style.display = 'none';
+        }
+
+        /**
+         * Wrapper for the fetch API to handle API calls.
+         * @param {string} endpoint - The API endpoint (e.g., '/api/login').
+         * @param {string} method - 'GET', 'POST', etc.
+         * @param {object} [body=null] - The JSON body for POST requests.
+         */
+        async function api(endpoint, method, body = null) {
+            const options = {
+                method,
+                headers: { 'Content-Type': 'application/json' }
+            };
+            if (body) {
+                options.body = JSON.stringify(body);
+            }
+
+            try {
+                const response = await fetch(endpoint, options);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || `Error ${response.status}`);
+                }
+                // The inner payload from main_server now has its own status
+                if (data.status === 'error') {
+                     throw new Error(data.message || 'An unknown server error occurred.');
+                }
+
+                return data; // Return successful response data
+            } catch (error) {
+                console.error(`API Error (${endpoint}):`, error);
+                throw error; // Re-throw to be caught by the caller
+            }
+        }
+
+        // --- Webcam Functions ---
+
+        async function startWebcam(videoElement) {
+            if (state.webcamStream) {
+                state.webcamStream.getTracks().forEach(track => track.stop());
+            }
+            try {
+                state.webcamStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                videoElement.srcObject = state.webcamStream;
+            } catch (err) {
+                console.error("Error accessing webcam:", err);
+                showMessage('Webcam Error', 'Could not access your webcam. Please check permissions.', 'error');
+            }
+        }
+
+        function stopWebcam() {
+            if (state.webcamStream) {
+                state.webcamStream.getTracks().forEach(track => track.stop());
+                state.webcamStream = null;
+            }
+        }
+
+        function captureFrame(videoElement, canvasElement) {
+            const context = canvasElement.getContext('2d');
+            context.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+            return canvasElement.toDataURL('image/jpeg');
+        }
+
+        // --- Auth & Navigation (Unchanged) ---
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            const form = event.target;
+            const body = {
+                username: form.username.value,
+                password: form.password.value
+            };
+
+            showView('loading');
+            try {
+                const data = await api('/api/login', 'POST', body);
+                if (data.status === '2fa_required') {
+                    showView('twoFactor');
+                    startWebcam(video2FA);
+                }
+            } catch (error) {
+                showMessage('Login Failed', error.message, 'error');
+                showView('login');
+            }
+        }
+
+        async function handleRegister(event) {
+            event.preventDefault();
+            if (!state.capturedPhoto) {
+                showMessage('Registration Error', 'Please capture a photo for biometric registration.', 'error');
+                return;
+            }
+
+            const form = event.target;
+            const body = {
+                username: form.username.value,
+                password: form.password.value,
+                role: form.role.value,
+                image: state.capturedPhoto
+            };
+
+            showView('loading');
+            try {
+                const data = await api('/api/register', 'POST', body);
+                stopWebcam();
+                showMessage('Registration Successful', data.message);
+                showView('login');
+                form.reset();
+                photoReg.classList.add('hidden');
+                photoRegStatus.classList.add('hidden');
+                state.capturedPhoto = null;
+            } catch (error) {
+                showMessage('Registration Failed', error.message, 'error');
+                showView('register');
+            }
+        }
+
+        async function handle2FA() {
+            const imageBase64 = captureFrame(video2FA, canvas2FA);
+
+            showView('loading');
+            stopWebcam();
+
+            try {
+                const data = await api('/api/2fa', 'POST', { image: imageBase64 });
+                if (data.status === 'ok') {
+                    state.username = data.username;
+                    state.role = data.role;
+                    await loadDashboard();
+                }
+            } catch (error) {
+                showMessage('2FA Failed', error.message, 'error');
+                showView('login'); // Send back to login
+            }
+        }
+
+        async function handleLogout() {
+            try {
+                await api('/api/logout', 'POST');
+            } catch (e) {
+                console.error("Logout error, clearing session locally.", e);
+            }
+            state.username = null;
+            state.role = null;
+            authStatus.textContent = 'You have been logged out.';
+            dashboardContent.innerHTML = ''; // Clear dashboard
+            showView('login');
+        }
+
+        async function loadDashboard() {
+            authStatus.textContent = `Logged in as: ${state.username} (${state.role})`;
+            showView('loading');
+
+            try {
+                // 1. Get the data schema
+                const schemaData = await api('/api/get_schema', 'GET');
+                state.schema = {
+                    requirements: schemaData.requirements,
+                    prompts: schemaData.prompts
+                };
+
+                // 2. Render the correct dashboard
+                if (state.role === 'patient') {
+                    await renderPatientDashboard();
+                } else if (state.role === 'doctor') {
+                    await renderDoctorDashboard();
+                } else if (state.role === 'lab_assistant') {
+                    await renderLabAssistantDashboard();
+                } else {
+                    throw new Error("Unknown user role.");
+                }
+
+                showView('dashboard');
+
+            } catch (error) {
+                showMessage('Dashboard Error', error.message, 'error');
+                showView('login');
+            }
+        }
+
+        async function checkSession() {
+            try {
+                const data = await api('/api/check_session', 'GET');
+                if (data.status === 'ok') {
+                    state.username = data.username;
+                    state.role = data.role;
+                    await loadDashboard();
+                } else {
+                    showView('login');
+                }
+            } catch (error) {
+                showView('login');
+            }
+        }
+
+        // --- Dashboard Rendering Functions (MODIFIED) ---
+
+        async function renderPatientDashboard() {
+            const requestTypes = Object.keys(state.schema.requirements);
+            const options = requestTypes.map(type => `<option value="${type}">${type}</option>`).join('');
+
+            // --- MODIFIED ---
+            // Patients no longer see results, only messages, per new logic.
+            let dataHtml = `
+                <h3 class="text-2xl font-semibold mb-4">Your Data</h3>
+                <div class="bg-gray-700 p-4 rounded-lg mb-6">
+                    <h4 class="text-xl font-semibold mb-3">Messages from Doctor</h4>
+                    <div id="patient-messages-list"><p class="text-gray-400">Loading messages...</p></div>
+                </div>
+            `;
+
+            dashboardContent.innerHTML = dataHtml + `
+                <h3 class="text-2xl font-semibold mb-4">New Test Request</h3>
+                <p class="text-sm text-gray-400 -mt-3 mb-3">Submit a request for a test. A doctor will review and assign it to the lab.</p>
+                <form id="patient-request-form" class="bg-gray-700 p-6 rounded-lg space-y-4">
+                    <div>
+                        <label for="patient-request-type" class="block text-sm font-medium text-gray-300">Select Test Type</label>
+                        <select id="patient-request-type" name="request_type" required class="mt-1 block w-full bg-gray-600 border border-gray-500 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="" disabled selected>-- Select a type --</option>
+                            ${options}
+                        </select>
+                    </div>
+                    <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md">
+                        Submit Secure Request
+                    </button>
+                </form>
+            `;
+
+            $('patient-request-form').addEventListener('submit', handlePatientRequest);
+
+            // Now, fetch and populate the data
+            try {
+                const data = await api('/api/get-patient-data', 'GET');
+
+                // Populate messages
+                const messagesList = $('patient-messages-list');
+                if (data.messages && data.messages.length > 0) {
+                    messagesList.innerHTML = data.messages.map(m => `
+                        <div class="bg-gray-600 p-3 rounded-md mb-2">
+                            <p class="text-gray-300">"${m.message}"</p>
+                            <p class="text-xs text-gray-400 text-right">- Dr. ${m.doctor_name} | ${new Date(m.timestamp).toLocaleString()}</p>
+                        </div>
+                    `).join('');
+                } else {
+                    messagesList.innerHTML = '<p class="text-gray-400">No messages from your doctor.</p>';
+                }
+            } catch (error) {
+                $('patient-messages-list').innerHTML = `<p class="text-red-400">Error loading messages: ${error.message}</p>`;
+            }
+        }
+
+        async function renderDoctorDashboard() {
+            // --- MODIFIED ---
+            // Doctor dashboard is now split into three sections
+            dashboardContent.innerHTML = `
+                <h3 class="text-2xl font-semibold mb-4">Completed Lab Reports</h3>
+                <div id="doctor-reports-list" class="bg-gray-700 p-4 rounded-lg mb-6">
+                    <p>Loading reports...</p>
+                </div>
+
+                <h3 class="text-2xl font-semibold mb-4">Pending Patient Requests</h3>
+                <div id="doctor-request-list" class="bg-gray-700 p-4 rounded-lg mb-6">
+                    <p>Loading requests...</p>
+                </div>
+
+                <h3 class="text-2xl font-semibold mb-4 mt-6">Send Message to Patient</h3>
+                <form id="doctor-message-form" class="bg-gray-700 p-6 rounded-lg space-y-4">
+                    <div>
+                        <label for="doctor-patient-id" class="block text-sm font-medium text-gray-300">Patient User ID</label>
+                        <input type="text" id="doctor-patient-id" name="patient_id" required class="mt-1 block w-full bg-gray-600 border border-gray-500 rounded-md shadow-sm py-2 px-3 text-white">
+                    </div>
+                    <div>
+                        <label for="doctor-message-text" class="block text-sm font-medium text-gray-300">Message</label>
+                        <textarea id="doctor-message-text" name="message" rows="3" required class="mt-1 block w-full bg-gray-600 border border-gray-500 rounded-md shadow-sm py-2 px-3 text-white"></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md">
+                        Send Message
+                    </button>
+                </form>
+            `;
+
+            $('doctor-message-form').addEventListener('submit', handleDoctorMessage);
+
+            // Fetch and render reports
+            try {
+                const reportData = await api('/api/doctor_view_reports', 'GET');
+                const listEl = $('doctor-reports-list');
+                if (reportData.status === 'success' && reportData.data.length > 0) {
+                    listEl.innerHTML = reportData.data.map(report => `
+                        <div class="bg-gray-600 p-4 rounded-md mb-3">
+                            <p class="font-semibold">${report.request_type}</p>
+                            <p class="text-sm text-gray-300">Patient ID: ${report.patient_id}</p>
+                            <p class="font-bold ${report.result_text.includes('High') ? 'text-red-400' : 'text-green-400'}">Result: ${report.result_text}</p>
+                            <p class="text-xs text-gray-400">Lab: ${report.lab_assistant_name} | Completed: ${new Date(report.timestamp).toLocaleString()}</p>
+                        </div>
+                    `).join('');
+                } else {
+                    listEl.innerHTML = '<p class="text-gray-400">No completed lab reports.</p>';
+                }
+            } catch (error) {
+                $('doctor-reports-list').innerHTML = `<p class="text-red-400">Error loading reports: ${error.message}</p>`;
+            }
+
+            // Fetch and render pending requests
+            try {
+                const requestData = await api('/api/doctor_view_requests', 'GET');
+                const listEl = $('doctor-request-list');
+                if (requestData.status === 'success' && requestData.data.length > 0) {
+                    const requests = requestData.data.map(req => `
+                        <div class="bg-gray-600 p-4 rounded-md mb-3 flex justify-between items-center">
+                            <div>
+                                <p class="font-semibold">${req.request_type}</p>
+                                <p class="text-sm text-gray-300">Patient: ${req.patient_username} (ID: ${req.patient_id})</p>
+                                <p class="text-sm text-gray-400">Requested: ${new Date(req.timestamp).toLocaleString()}</p>
+                            </div>
+                            <button data-id="${req.request_id}" class="doctor-assign-btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded-md text-sm">
+                                Approve & Assign to Lab
+                            </button>
+                        </div>
+                    `).join('');
+                    listEl.innerHTML = requests;
+                    listEl.querySelectorAll('.doctor-assign-btn').forEach(btn => {
+                        btn.addEventListener('click', handleDoctorAssign);
+                    });
+                } else {
+                    listEl.innerHTML = '<p class="text-gray-400">No pending patient requests.</p>';
+                }
+            } catch (error) {
+                $('doctor-request-list').innerHTML = `<p class="text-red-400">Error loading requests: ${error.message}</p>`;
+            }
+        }
+
+        async function renderLabAssistantDashboard() {
+            // This function remains largely the same, as the logic was already correct
+            dashboardContent.innerHTML = `
+                <h3 class="text-2xl font-semibold mb-4">Pending Lab Requests</h3>
+                <div id="lab-request-list" class="bg-gray-700 p-4 rounded-lg">
+                    <p>Loading requests...</p>
+                </div>
+
+                <div id="lab-upload-form-container" class="hidden mt-6">
+                    <h3 id="lab-form-title" class="text-2xl font-semibold mb-4">Upload Results</h3>
+                    <form id="lab-upload-form" class="bg-gray-700 p-6 rounded-lg space-y-4">
+                        <input type="hidden" id="lab-doctor-request-id" name="doctor_request_id">
+                        <input type="hidden" id="lab-request-type" name="request_type">
+                        <div id="lab-dynamic-form" class="space-y-3"></div>
+                        <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md">
+                            Submit Secure Lab Results
+                        </button>
+                        <button type="button" id="lab-cancel-btn" class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-md mt-2">
+                            Cancel
+                        </button>
+                    </form>
+                </div>
+            `;
+            try {
+                const data = await api('/api/lab_view_requests', 'GET');
+                if (data.status === 'success') {
+                    const listEl = $('lab-request-list');
+                    if (data.data.length === 0) {
+                        listEl.innerHTML = '<p class="text-gray-400">No pending lab requests.</p>';
+                        return;
+                    }
+
+                    const requests = data.data.map(req => `
+                        <div class="bg-gray-600 p-4 rounded-md mb-3">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="font-semibold">${req.request_type}</p>
+                                    <p class="text-sm text-gray-300">Patient: ${req.patient_username} (from Dr. ${req.doctor_name})</p>
+                                    <p class="text-sm text-gray-400">Assigned: ${new Date(req.timestamp).toLocaleString()}</p>
+                                </div>
+                                <button data-id="${req.doctor_request_id}" data-type="${req.request_type}" class="lab-upload-btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded-md text-sm">
+                                    Upload Results
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                    listEl.innerHTML = requests;
+
+                    // Add event listeners
+                    listEl.querySelectorAll('.lab-upload-btn').forEach(btn => {
+                        btn.addEventListener('click', showLabUploadForm);
+                    });
+                    $('lab-cancel-btn').addEventListener('click', () => {
+                        $('lab-upload-form-container').classList.add('hidden');
+                    });
+                    $('lab-upload-form').addEventListener('submit', handleLabUpload);
+
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                $('lab-request-list').innerHTML = `<p class="text-red-400">Error loading requests: ${error.message}</p>`;
+            }
+        }
+
+        /**
+         * Helper to create the dynamic form fields based on request type.
+         */
+        function renderDynamicForm(containerId, requestType) {
+            const container = $(containerId);
+            if (!requestType || !state.schema.requirements[requestType]) {
+                container.innerHTML = '';
+                return;
+            }
+
+            const fields = state.schema.requirements[requestType];
+            const prompts = state.schema.prompts;
+
+            container.innerHTML = fields.map(field => `
+                <div>
+                    <label for="form-field-${field}" class="block text-sm font-medium text-gray-300">${prompts[field] || field}</label>
+                    <input type="number" step="any" id="form-field-${field}" name="${field}" required class="mt-1 block w-full bg-gray-600 border border-gray-500 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+            `).join('');
+        }
+
+        // --- Dashboard Action Handlers (MODIFIED) ---
+
+        async function handlePatientRequest(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const requestType = formData.get('request_type');
+
+            if (!requestType) {
+                showMessage('Error', 'Please select a request type.', 'error');
+                return;
+            }
+
+            const body = {
+                request_type: requestType,
+            };
+
+            showView('loading');
+            try {
+                // --- MODIFIED ---
+                // This is no longer a prediction, just logging a request.
+                const data = await api('/api/patient_request', 'POST', body);
+                showMessage(
+                    'Request Submitted',
+                    `Your request for '${requestType}' has been submitted. A doctor will review it shortly.`,
+                    'info'
+                );
+                await loadDashboard(); // Reload dashboard
+            } catch (error) {
+                showMessage('Request Failed', error.message, 'error');
+                await loadDashboard(); // Reload dashboard
+            }
+        }
+
+        async function handleDoctorAssign(event) {
+            const button = event.target;
+            const requestId = button.dataset.id;
+            button.disabled = true;
+            button.textContent = 'Assigning...';
+
+            try {
+                const data = await api('/api/doctor_assign_request', 'POST', { request_id: requestId });
+                showMessage('Success', data.message, 'info');
+            } catch (error) {
+                showMessage('Assignment Failed', error.message, 'error');
+            }
+            await loadDashboard(); // Refresh doctor dashboard
+        }
+
+        async function handleDoctorMessage(event) {
+            event.preventDefault();
+            const form = event.target;
+            const body = {
+                patient_id: form.patient_id.value,
+                message: form.message.value
+            };
+
+            try {
+                const data = await api('/api/doctor-send-message', 'POST', body);
+                showMessage('Success', data.message, 'info');
+                form.reset();
+            } catch (error) {
+                showMessage('Message Failed', error.message, 'error');
+            }
+        }
+
+        function showLabUploadForm(event) {
+            const button = event.target;
+            const requestId = button.dataset.id;
+            const requestType = button.dataset.type;
+
+            $('lab-form-title').textContent = `Upload Results for: ${requestType}`;
+            $('lab-doctor-request-id').value = requestId;
+            $('lab-request-type').value = requestType;
+            renderDynamicForm('lab-dynamic-form', requestType);
+            $('lab-upload-form-container').classList.remove('hidden');
+            window.scrollTo(0, document.body.scrollHeight);
+        }
+
+        async function handleLabUpload(event) {
+            // This logic is mostly unchanged, as it was correct.
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const requestType = formData.get('request_type');
+
+            const body = {
+                doctor_request_id: formData.get('doctor_request_id'),
+                request_type: requestType,
+                form: {}
+            };
+
+            const fields = state.schema.requirements[requestType];
+            for (const field of fields) {
+                body.form[field] = formData.get(field);
+            }
+
+            showView('loading');
+            try {
+                const data = await api('/api/lab_upload_results', 'POST', body);
+                showMessage('Success', data.message, 'info');
+            } catch (error) {
+                showMessage('Upload Failed', error.message, 'error');
+            }
+            await loadDashboard(); // Refresh lab dashboard
+        }
+
+        // --- Event Listeners (Unchanged) ---
+        function initApp() {
+            // Navigation
+            $('show-register-link').addEventListener('click', (e) => {
+                e.preventDefault();
+                showView('register');
+                startWebcam(videoReg);
+                state.capturedPhoto = null;
+                photoReg.classList.add('hidden');
+                photoRegStatus.classList.add('hidden');
+            });
+            $('show-login-link').addEventListener('click', (e) => {
+                e.preventDefault();
+                showView('login');
+                stopWebcam();
+            });
+
+            // Forms
+            $('login-form').addEventListener('submit', handleLogin);
+            $('register-form').addEventListener('submit', handleRegister);
+            $('logout-btn').addEventListener('click', handleLogout);
+
+            // Modal
+            modalCloseBtn.addEventListener('click', closeModal);
+            modalBackdrop.addEventListener('click', closeModal);
+
+            // Webcam Capture
+            captureRegBtn.addEventListener('click', () => {
+                state.capturedPhoto = captureFrame(videoReg, canvasReg);
+                photoReg.src = state.capturedPhoto;
+                photoReg.classList.remove('hidden');
+                photoRegStatus.classList.remove('hidden');
+            });
+
+            capture2FABtn.addEventListener('click', handle2FA);
+
+            // Initial Load
+            checkSession();
+        }
+
+        // Start the application
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
