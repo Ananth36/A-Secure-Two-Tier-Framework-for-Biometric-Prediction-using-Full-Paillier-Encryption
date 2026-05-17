@@ -1,15 +1,5 @@
 # File: app.py
-#
-# --- THIS FILE IS HEAVILY MODIFIED ---
-# 1. All API handlers (e.g., /api/patient_request) have been
-#    REWRITTEN to match the logic of your new 'hosp_app.py'.
-# 2. Patient 'submit_request' now only logs a request (no prediction).
-# 3. Patient 'get_patient_data' now only fetches messages, not results.
-# 4. Doctor 'get_doctor_data' is split to fetch requests and reports.
-# 5. Doctor dashboard now decrypts and shows results, mimicking 'hosp_app.py'.
-# 6. Lab Assistant 'lab_upload_results' is now the *only* function
-#    that triggers a prediction.
-# 7. All auth, 2FA, and security from the original 'app.py' is kept.
+
 
 import os
 import json
@@ -27,49 +17,48 @@ from flask import Flask, request, jsonify, session, send_from_directory
 from flask_session import Session
 from werkzeug.security import check_password_hash
 
-# --- NEW IMPORTS for Python 3.12 Compatibility ---
-from deepface import DeepFace  # Replaces face_recognition
-import shutil  # Used for temporary files
 
-# --- App Setup ---
+from deepface import DeepFace  
+import shutil  
+
 app = Flask(__name__, static_folder='.', static_url_path='')
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 app.config["SECRET_KEY"] = os.urandom(24)
 Session(app)
 
-# --- Configuration ---
+
 DATA_DIR = 'data'
 FACE_DATA_DIR = os.path.join(DATA_DIR, 'face_images')
 USER_CSV = os.path.join(DATA_DIR, 'users.csv')
 MAIN_SERVER_URL = "http://127.0.0.1:5001"
 
-# --- Create Directories ---
+
 os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(FACE_DATA_DIR, exist_ok=True)
 eu.init_user_csv(USER_CSV)
 
-# --- Load App Server's Keys ---
+
 try:
     APP_RSA_PRIV_KEY = eu.load_rsa_private_key('app_server_rsa.priv')
     APP_RSA_PUB_KEY_STR = eu.load_rsa_public_key_str('app_server_rsa.pub')
     MAIN_SERVER_RSA_PUB_KEY = eu.load_rsa_public_key('main_server_rsa.pub')
     PAILLIER_PUB_KEY, PAILLIER_PRIV_KEY = eu.load_paillier_keys()
-    print("🔑 App Server keys loaded successfully.")
+    print(" App Server keys loaded successfully.")
 except FileNotFoundError:
-    print("❌ CRITICAL: Keys not found. Please run 'encryption_utils.py' first.")
+    print(" CRITICAL: Keys not found. Please run 'encryption_utils.py' first.")
     exit()
 
-# --- Warm up DeepFace ---
+
 try:
-    print("🚀 Initializing Face Recognition Engine (DeepFace)...")
+    print(" Initializing Face Recognition Engine (DeepFace)...")
     dummy_image = np.zeros((100, 100, 3), dtype=np.uint8)
     DeepFace.analyze(dummy_image, actions=['age'], enforce_detection=False)
-    print("✅ Face Recognition Engine ready.")
+    print(" Face Recognition Engine ready.")
 except Exception as e:
     print(f"Warning: Could not pre-initialize DeepFace: {e}")
 
-# --- Data Schemas (MODIFIED) ---
+
 DATA_REQUIREMENTS = {
     "Disease Risk Stratification": ['age', 'sex', 'trestbps', 'chol'],
     "Mental Health Check": ['age', 'work_stress', 'sleep_hours', 'family_support'],  # <-- MODIFIED
@@ -77,7 +66,7 @@ DATA_REQUIREMENTS = {
     "Genomic Disease Susceptibility": ['totChol', 'sysBP', 'glucose', 'age']
 }
 PROMPTS = {
-    # General / Disease Risk / Genomic
+    
     'age': "Enter age",
     'sex': "Enter sex (0=F, 1=M)",
     'trestbps': "Enter resting BP (e.g., 120)",
@@ -92,18 +81,16 @@ PROMPTS = {
     'perimeter_mean': "Enter perimeter_mean",
     'area_mean': "Enter area_mean",
 
-    # NEW 4-Feature Mental Health Check
+    
     'work_stress': "Work Stress (0-10)",
     'sleep_hours': "Avg. sleep hours per night",
     'family_support': "Family Support (0-10)"
 
-    # Removed old 'Age' and 'Gender' prompts
+    
 }
 
 
-# ===============================================
-# ==         HELPER FUNCTIONS                  ==
-# ===============================================
+
 
 def send_signed_request(endpoint, payload):
     """
@@ -154,10 +141,7 @@ def sigmoid(x):
         return 0.0 if x < 0 else 1.0
 
 
-# ===============================================
-# ==         MAIN WEB ROUTES (Auth)            ==
-# ===============================================
-# (These routes are unchanged and handle auth)
+
 
 @app.route('/')
 def index():
@@ -311,9 +295,8 @@ def get_prompts():
     })
 
 
-# ===============================================
-# ==     API ENDPOINTS (NEW LOGIC)             ==
-# ===============================================
+
+
 
 @app.route('/api/patient_request', methods=['POST'])
 def submit_request():
@@ -363,11 +346,11 @@ def get_patient_data():
         "action": "view_messages",
         "patient_id": session['user_id']
     }
-    # Use '/query' endpoint as this is a DB read
+    
     response = send_signed_request("/query", payload)
 
     if response.get('status') == 'success':
-        # Send an empty results array to satisfy index.html
+        
         return jsonify({
             "status": "ok",
             "results": [],
@@ -406,7 +389,7 @@ def get_doctor_reports():
     }
     response = send_signed_request("/query", payload)
 
-    # Decrypt the results before sending to frontend
+    
     if response.get('status') == 'success' and 'data' in response:
         decrypted_reports = []
         for report in response['data']:
@@ -528,7 +511,7 @@ def lab_upload_result():
             "paillier_data": encrypted_data,
             "lab_assistant_name": session['username']
         }
-        # This is the only ML-related call, so it uses /predict
+        
         response = send_signed_request("/predict", payload)
         return jsonify(response)
 
@@ -540,10 +523,8 @@ def lab_upload_result():
         return jsonify({"status": "error", "message": f"An error occurred: {e}"}), 500
 
 
-# ===============================================
-# ==         RUN THE APP                       ==
-# ===============================================
+
 
 if __name__ == '__main__':
-    print("--- 🚀 Starting Auth & App Server on http://127.0.0.1:5000 ---")
+    print("---  Starting Auth & App Server on http://127.0.0.1:5000 ---")
     app.run(host='127.0.0.1', port=5000, debug=False)
