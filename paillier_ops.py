@@ -1,4 +1,3 @@
-# File: paillier_ops.py
 
 import json
 from phe import paillier
@@ -23,14 +22,13 @@ def perform_prediction(encrypted_data, model_weights_path):
     intercept = weights['intercept']
     coefficients = weights['coefficients']
 
-    # Homomorphically compute the dot product of encrypted data and plaintext weights
+   
     log_odds = intercept
     for feature, coeff in coefficients.items():
         if feature in encrypted_data:
             log_odds += encrypted_data[feature] * coeff
 
-    # The server returns the encrypted log-odds.
-    # The client will decrypt this to get the final result.
+
     return log_odds
 
 
