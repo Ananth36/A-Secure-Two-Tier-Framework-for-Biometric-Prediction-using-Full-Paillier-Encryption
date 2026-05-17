@@ -1,9 +1,4 @@
 # File: encryption_utils.py
-#
-# --- THIS IS A MERGED FILE ---
-# 1. Contains User/CSV management functions for app.py (from original project)
-# 2. Contains Key Generation & Crypto Ops (from new files)
-# 3. Main block generates keys for 'app_server' and 'main_server' (for Flask project)
 
 import os
 import json
@@ -17,21 +12,19 @@ from cryptography.hazmat.backends import default_backend
 from phe import paillier
 from werkzeug.security import generate_password_hash, check_password_hash
 
-# --- Configuration ---
+
 KEYS_DIR = 'keys'
-DATA_DIR = 'data'  # For user CSV
-USER_CSV = os.path.join(DATA_DIR, 'users.csv')  # For user CSV
+DATA_DIR = 'data'  
+USER_CSV = os.path.join(DATA_DIR, 'users.csv')  
 RSA_KEY_SIZE = 2048
 PAILLIER_KEY_SIZE = 1024
 
-# Ensure the keys/data directories exist
+
 os.makedirs(KEYS_DIR, exist_ok=True)
 os.makedirs(DATA_DIR, exist_ok=True)
 
 
-# ===============================================
-# ==         USER & CSV MANAGEMENT             ==
-# ===============================================
+
 
 def hash_password(password):
     """Hashes a password using SHA256."""
@@ -82,9 +75,7 @@ def get_user_from_csv(filepath, username):
     return None
 
 
-# ===============================================
-# ==         KEY GENERATION                    ==
-# ===============================================
+
 
 def generate_and_save_rsa_keys(name):
     """Generates an RSA key pair and saves it to the keys directory."""
@@ -111,7 +102,7 @@ def generate_and_save_rsa_keys(name):
     )
     with open(os.path.join(KEYS_DIR, f'{name}_rsa.pub'), 'wb') as f:
         f.write(pem_pub)
-    print(f"✅ Generated RSA keys for '{name}'.")
+    print(f" Generated RSA keys for '{name}'.")
 
 
 def generate_and_save_paillier_keys():
@@ -124,12 +115,10 @@ def generate_and_save_paillier_keys():
     }
     with open(os.path.join(KEYS_DIR, 'paillier_keys.json'), 'w') as f:
         json.dump(keys, f, indent=4)
-    print("✅ Generated Paillier keys.")
+    print(" Generated Paillier keys.")
 
 
-# ===============================================
-# ==         KEY LOADING                       ==
-# ===============================================
+
 
 def load_rsa_private_key(name):
     """Loads an RSA private key from the keys directory."""
@@ -175,9 +164,7 @@ def load_paillier_keys():
         return public_key, private_key
 
 
-# ===============================================
-# ==         CRYPTOGRAPHIC OPERATIONS          ==
-# ===============================================
+
 
 def rsa_encrypt(message_bytes, public_key):
     """Encrypts a message (bytes) using an RSA public key."""
@@ -249,23 +236,23 @@ def rsa_verify(message_str, signature, public_key):
 # ===============================================
 
 if __name__ == "__main__":
-    print("--- 🔑 Generating and saving all cryptographic keys... ---")
+    print("---  Generating and saving all cryptographic keys... ---")
 
     # Note: Directories are created at the top of the file
 
     # Generate keys for the two servers (Flask Project)
     generate_and_save_rsa_keys("app_server")
     generate_and_save_rsa_keys("main_server")
-    print("✅ RSA keys for app and main servers generated.")
+    print(" RSA keys for app and main servers generated.")
 
     # Generate Paillier keys for homomorphic encryption
     generate_and_save_paillier_keys()
-    print("✅ Paillier keys for homomorphic encryption generated.")
+    print(" Paillier keys for homomorphic encryption generated.")
 
     # Initialize the user database
     init_user_csv(USER_CSV)
-    print("✅ User database initialized.")
+    print(" User database initialized.")
 
-    print("\n--- ✅ All keys and databases initialized successfully. ---")
+    print("\n---  All keys and databases initialized successfully. ---")
     print(f"Keys are saved in the '{KEYS_DIR}' directory.")
     print(f"User CSV is at '{USER_CSV}'.")
