@@ -4,19 +4,18 @@ import os
 import pandas as pd
 import json
 import encryption_utils as eu
-import paillier_ops  # <-- ADDED IMPORT
+import paillier_ops 
 
-# --- Configuration ---
-RAW_DATA_DIR = "./datasets"  # Assumes CSVs are in the root directory
+
+RAW_DATA_DIR = "./datasets"  
 ENCRYPTED_DATA_DIR = "encrypted_data"
 os.makedirs(ENCRYPTED_DATA_DIR, exist_ok=True)
 
-# --- Load Paillier Public Key ---
 try:
     paillier_pub_key = eu.load_paillier_keys()[0]
-    print("🔑 Paillier public key loaded.")
+    print(" Paillier public key loaded.")
 except FileNotFoundError:
-    print("❌ ERROR: Paillier keys not found. Please run 'encryption_utils.py' first.")
+    print(" ERROR: Paillier keys not found. Please run 'encryption_utils.py' first.")
     exit()
 
 
@@ -28,7 +27,7 @@ def encrypt_and_save_dataframe(df, features_to_encrypt, target_column, output_fi
     print(f"   Found {len(df_cleaned)} valid records to encrypt.")
 
     if len(df_cleaned) == 0:
-        print(f"   ⚠️ WARNING: No data. Skipping file generation.")
+        print(f"    WARNING: No data. Skipping file generation.")
         return
 
     encrypted_records = []
@@ -45,7 +44,7 @@ def encrypt_and_save_dataframe(df, features_to_encrypt, target_column, output_fi
     filepath = os.path.join(ENCRYPTED_DATA_DIR, output_filename)
     with open(filepath, 'w') as f:
         json.dump(encrypted_records, f, indent=4)
-    print(f"✅ Data saved to '{filepath}'")
+    print(f" Data saved to '{filepath}'")
 
 
 def process_heart_disease():
@@ -58,7 +57,7 @@ def process_heart_disease():
         features = ['age', 'sex', 'trestbps', 'chol']
         encrypt_and_save_dataframe(df, features, 'target', 'encrypted_heart_disease.json')
     except FileNotFoundError:
-        print("❌ ERROR: 'heart_disease_dataset.csv' not found.")
+        print(" ERROR: 'heart_disease_dataset.csv' not found.")
 
 
 def process_mental_health():
@@ -79,9 +78,9 @@ def process_mental_health():
         encrypt_and_save_dataframe(df, features, 'mental_illness', 'encrypted_mental_health.json')
 
     except FileNotFoundError:
-        print("❌ ERROR: 'mental_health_survey.csv' not found.")
+        print(" ERROR: 'mental_health_survey.csv' not found.")
     except KeyError as e:
-        print(f"❌ ERROR: Missing column in mental_health_survey.csv — {e}")
+        print(f" ERROR: Missing column in mental_health_survey.csv — {e}")
 
 
 def process_cancer_check():
@@ -92,7 +91,7 @@ def process_cancer_check():
         features = ['radius_mean', 'texture_mean', 'perimeter_mean', 'area_mean']
         encrypt_and_save_dataframe(df, features, 'diagnosis', 'encrypted_cancer_check.json')
     except FileNotFoundError:
-        print("❌ ERROR: 'breast_cancer_data.csv' not found.")
+        print(" ERROR: 'breast_cancer_data.csv' not found.")
 
 
 def process_framingham():
@@ -102,13 +101,13 @@ def process_framingham():
         features = ['totChol', 'sysBP', 'glucose', 'age']
         encrypt_and_save_dataframe(df, features, 'TenYearCHD', 'encrypted_framingham.json')
     except FileNotFoundError:
-        print("❌ ERROR: 'framingham.csv' not found.")
+        print(" ERROR: 'framingham.csv' not found.")
 
 
 if __name__ == "__main__":
-    print("--- 🔒 Starting Dataset Encryption Process ---")
+    print("---  Starting Dataset Encryption Process ---")
     process_heart_disease()
     process_mental_health()
     process_cancer_check()
     process_framingham()
-    print("\n✅ All datasets have been encrypted and stored in the 'encrypted_data/' directory.")
+    print("\n All datasets have been encrypted and stored in the 'encrypted_data/' directory.")
