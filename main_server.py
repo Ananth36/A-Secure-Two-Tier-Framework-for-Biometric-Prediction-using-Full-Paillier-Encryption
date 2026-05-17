@@ -1,12 +1,5 @@
 # File: main_server.py
-#
-# --- THIS FILE IS HEAVILY MODIFIED ---
-# 1. Keeps the Flask server structure and security wrappers.
-# 2. All business logic (handle_prediction, handle_query, handle_action)
-#    has been REPLACED with the logic from your new 'server.py'.
-# 3. All endpoints (/predict, /query, /action) now route to a
-#    single 'process_request_logic' function, just like your new 'server.py'.
-# 4. CSV initialization is updated to match the new schema.
+
 
 import os
 import json
@@ -17,25 +10,25 @@ import traceback
 from flask import Flask, request, jsonify
 import uuid
 
-# Custom crypto libraries
+
 import encryption_utils as eu
 import paillier_ops as paillier
 
-# --- Configuration ---
+
 app = Flask(__name__)
 
-# --- Server & Key Configuration ---
+
 try:
     APP_SERVER_RSA_PUB_KEY = eu.load_rsa_public_key('app_server_rsa.pub')
     MAIN_SERVER_RSA_PRIV_KEY = eu.load_rsa_private_key('main_server_rsa.priv')
     PAILLIER_PUB_KEY, _ = eu.load_paillier_keys()
-    print("🔑 Main Server keys (Main Private, App Public, Paillier Public) loaded.")
+    print(" Main Server keys (Main Private, App Public, Paillier Public) loaded.")
 except FileNotFoundError as e:
-    print(f"❌ ERROR: Key file not found. {e}")
+    print(f" ERROR: Key file not found. {e}")
     print("Please run 'encryption_utils.py' to generate all keys first.")
     exit()
 except Exception as e:
-    print(f"❌ An unexpected error occurred loading keys: {e}")
+    print(f" An unexpected error occurred loading keys: {e}")
     exit()
 
 # --- Data File Configuration (from new server.py) ---
@@ -53,7 +46,7 @@ MODEL_PATHS = {
 }
 
 
-# --- Helper Functions (Security Wrappers) ---
+
 
 def init_csv(filepath, columns):
     """Initializes a CSV file with headers if it doesn't exist."""
@@ -114,7 +107,7 @@ def create_signed_response(response_payload):
         return jsonify({"status": "error", "message": f"Error creating signed response: {e}"})
 
 
-# --- NEW UNIFIED LOGIC HANDLER (from new server.py) ---
+
 
 def process_request_logic(request_data):
     """
@@ -125,11 +118,11 @@ def process_request_logic(request_data):
         role = request_data.get('role')
         action = request_data.get('action')
 
-        # PATIENT ACTIONS
+ 
         if role == 'patient':
             if action == 'request_test':
                 df = pd.read_csv(PATIENT_REQUESTS_CSV)
-                # Use UUID for request_id to avoid race conditions
+ 
                 new_id = str(uuid.uuid4())
                 new_request = pd.DataFrame([{'request_id': new_id, 'patient_id': request_data['patient_id'],
                                              'patient_username': request_data['patient_username'],
@@ -143,20 +136,20 @@ def process_request_logic(request_data):
                 df = pd.read_csv(PATIENT_MESSAGES_CSV)
                 messages = df[df['patient_id'] == request_data['patient_id']].to_dict('records')
 
-                # Convert seconds to milliseconds for JS frontend
+            
                 for msg in messages:
                     if 'timestamp' in msg:
                         msg['timestamp'] = msg['timestamp'] * 1000
 
                 return {"status": "success", "data": messages}
 
-        # DOCTOR ACTIONS
+     
         elif role == 'doctor':
             if action == 'view_patient_requests':
                 df = pd.read_csv(PATIENT_REQUESTS_CSV)
                 pending = df[df['is_addressed'] == False].to_dict('records')
 
-                # Convert seconds to milliseconds for JS frontend
+                
                 for req in pending:
                     if 'timestamp' in req:
                         req['timestamp'] = req['timestamp'] * 1000
@@ -175,7 +168,7 @@ def process_request_logic(request_data):
                 df_patient.to_csv(PATIENT_REQUESTS_CSV, index=False)
 
                 df_doctor = pd.read_csv(DOCTOR_REQUESTS_CSV)
-                new_id = str(uuid.uuid4())  # Use UUID
+                new_id = str(uuid.uuid4())  
                 new_request = pd.DataFrame([{'doctor_request_id': new_id, 'patient_request_id': req_id,
                                              'patient_id': patient_req_data['patient_id'],
                                              'patient_username': patient_req_data['patient_username'],
@@ -190,7 +183,7 @@ def process_request_logic(request_data):
                 df = pd.read_csv(LAB_REPORTS_CSV)
                 data = df.to_dict('records')
 
-                # Convert seconds to milliseconds for JS frontend
+                
                 for report in data:
                     if 'timestamp' in report:
                         report['timestamp'] = report['timestamp'] * 1000
@@ -205,13 +198,13 @@ def process_request_logic(request_data):
                 pd.concat([pd.read_csv(PATIENT_MESSAGES_CSV), new_message]).to_csv(PATIENT_MESSAGES_CSV, index=False)
                 return {"status": "success", "message": "Message sent."}
 
-        # LAB ASSISTANT ACTIONS
+        
         elif role == 'lab_assistant':
             if action == 'view_doctor_requests':
                 df = pd.read_csv(DOCTOR_REQUESTS_CSV)
                 pending = df[df['is_complete'] == False].to_dict('records')
 
-                # Convert seconds to milliseconds for JS frontend
+                
                 for req in pending:
                     if 'timestamp' in req:
                         req['timestamp'] = req['timestamp'] * 1000
@@ -225,17 +218,17 @@ def process_request_logic(request_data):
                 if doc_req_id not in df_doctor['doctor_request_id'].values:
                     return {"status": "error", "message": "Doctor request ID not found."}
 
-                # This is the ML Prediction step
+              
                 deserialized_data = {k: paillier.deserialize_encrypted_number(PAILLIER_PUB_KEY, v) for k, v in
                                      request_data['paillier_data'].items()}
                 encrypted_result = paillier.perform_prediction(deserialized_data,
                                                                MODEL_PATHS[request_data['request_type']])
 
-                # Mark as complete
+                
                 df_doctor.loc[df_doctor['doctor_request_id'] == doc_req_id, 'is_complete'] = True
                 df_doctor.to_csv(DOCTOR_REQUESTS_CSV, index=False)
 
-                # Save the encrypted result
+                
                 patient_id = df_doctor[df_doctor['doctor_request_id'] == doc_req_id].iloc[0]['patient_id']
                 lab_report_id = str(uuid.uuid4())
                 new_report = pd.DataFrame([{"lab_report_id": lab_report_id, "doctor_request_id": doc_req_id,
@@ -255,9 +248,7 @@ def process_request_logic(request_data):
         return {"status": "error", "message": f"An unexpected server error occurred: {e}"}
 
 
-# --- Main API Endpoints ---
-# All endpoints now route to the same logic function,
-# which distinguishes based on the payload's 'role' and 'action'.
+
 
 @app.route('/predict', methods=['POST'])
 def predict_endpoint():
@@ -265,7 +256,7 @@ def predict_endpoint():
     if error:
         return jsonify(error), 401
 
-    # This endpoint is now used for 'upload_lab_results'
+   
     response_payload = process_request_logic(payload)
     return create_signed_response(response_payload)
 
@@ -276,7 +267,7 @@ def query_endpoint():
     if error:
         return jsonify(error), 401
 
-    # Used for 'view_messages', 'view_patient_requests', 'view_lab_reports', etc.
+ 
     response_payload = process_request_logic(payload)
     return create_signed_response(response_payload)
 
@@ -287,14 +278,14 @@ def action_endpoint():
     if error:
         return jsonify(error), 401
 
-    # Used for 'request_test', 'request_lab_work', 'send_message'
+    
     response_payload = process_request_logic(payload)
     return create_signed_response(response_payload)
 
 
-# --- Main Runner ---
+
 if __name__ == '__main__':
-    # Initialize all data CSVs (from new server.py)
+    
     init_csv(PATIENT_REQUESTS_CSV,
              ['request_id', 'patient_id', 'patient_username', 'request_type', 'timestamp', 'is_addressed'])
     init_csv(DOCTOR_REQUESTS_CSV,
@@ -304,5 +295,5 @@ if __name__ == '__main__':
                                'result_encrypted', 'timestamp'])
     init_csv(PATIENT_MESSAGES_CSV, ['patient_id', 'doctor_name', 'message', 'timestamp'])  # <-- 'timestamp' ADDED
 
-    print("--- 🚀 Starting Secure Main Resource Server on http://127.0.0.1:5001 ---")
+    print("---  Starting Secure Main Resource Server on http://127.0.0.1:5001 ---")
     app.run(host='127.0.0.1', port=5001, debug=False)
