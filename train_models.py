@@ -7,17 +7,17 @@ from sklearn.linear_model import LogisticRegression
 import encryption_utils as eu
 import paillier_ops as paillier
 
-# --- Configuration ---
+
 ENCRYPTED_DATA_DIR = "encrypted_data"
 MODEL_DIR = "models"
 os.makedirs(MODEL_DIR, exist_ok=True)
 
-# --- Load Paillier Private Key for Decryption ---
+
 try:
     paillier_pub_key, paillier_priv_key = eu.load_paillier_keys()
-    print("🔑 Paillier keys loaded for training.")
+    print(" Paillier keys loaded for training.")
 except FileNotFoundError:
-    print("❌ ERROR: Paillier keys not found. Please run 'encryption_utils.py' first.")
+    print(" ERROR: Paillier keys not found. Please run 'encryption_utils.py' first.")
     exit()
 
 
@@ -29,7 +29,7 @@ def save_weights(model, feature_names, filepath):
     }
     with open(filepath, 'w') as f:
         json.dump(weights, f, indent=4)
-    print(f"✅ Model weights saved to '{filepath}'")
+    print(f" Model weights saved to '{filepath}'")
 
 
 def decrypt_records_to_df(encrypted_records, features, target_col):
@@ -59,7 +59,7 @@ def train_model_from_file(filepath, features, target_col, model_save_path, model
 
         df = decrypt_records_to_df(encrypted_records, features, target_col)
         if df.empty:
-            print(f"❌ ERROR: No valid data to train on for {model_name}. Please check the encryption script.")
+            print(f" ERROR: No valid data to train on for {model_name}. Please check the encryption script.")
             return
 
         X = df[features]
@@ -70,9 +70,9 @@ def train_model_from_file(filepath, features, target_col, model_save_path, model
         model.fit(X, y)
         save_weights(model, features, model_save_path)
     except FileNotFoundError:
-        print(f"❌ ERROR: '{os.path.basename(filepath)}' not found. Please run 'encrypt_datasets.py' first.")
+        print(f" ERROR: '{os.path.basename(filepath)}' not found. Please run 'encrypt_datasets.py' first.")
     except Exception as e:
-        print(f"❌ An unexpected error occurred: {e}")
+        print(f" An unexpected error occurred: {e}")
 
 
 if __name__ == "__main__":
@@ -90,8 +90,8 @@ if __name__ == "__main__":
     # --- UPDATED: MENTAL HEALTH MODEL ---
     train_model_from_file(
         os.path.join(ENCRYPTED_DATA_DIR, 'encrypted_mental_health.json'),
-        ['age', 'work_stress', 'sleep_hours', 'family_support'],  # ✅ Updated feature names
-        'mental_illness',  # ✅ Updated target
+        ['age', 'work_stress', 'sleep_hours', 'family_support'],  #  Updated feature names
+        'mental_illness',  #  Updated target
         os.path.join(MODEL_DIR, "mental_health_model.json"),
         "Mental Health Model"
     )
@@ -112,4 +112,4 @@ if __name__ == "__main__":
         "Genomic Susceptibility Model"
     )
 
-    print("\n✅ All models have been trained.")
+    print("\n All models have been trained.")
